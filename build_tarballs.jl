@@ -10,7 +10,7 @@ platforms = [
     #BinaryProvider.Linux(:armv7l, :glibc),
     #BinaryProvider.Linux(:powerpc64le, :glibc),
     BinaryProvider.MacOS(),
-    #BinaryProvider.Windows(:i686),
+    BinaryProvider.Windows(:i686),
     BinaryProvider.Windows(:x86_64)
 ]
 

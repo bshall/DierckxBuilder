@@ -1,10 +1,10 @@
-      subroutine curev(idim,t,n,c,nc,k,u,m,x,mx,ier)
+      subroutine curev(idim,t,n,c,nc,k,u,m,x,mx,e,ier)
 c  subroutine curev evaluates in a number of points u(i),i=1,2,...,m
 c  a spline curve s(u) of degree k and dimension idim, given in its
 c  b-spline representation.
 c
 c  calling sequence:
-c     call curev(idim,t,n,c,nc,k,u,m,x,mx,ier)
+c     call curev(idim,t,n,c,nc,k,u,m,x,mx,e,ier)
 c
 c  input parameters:
 c    idim : integer, giving the dimension of the spline curve.
@@ -17,6 +17,10 @@ c    u    : array,length m, which contains the points where s(u) must
 c           be evaluated.
 c    m    : integer, giving the number of points where s(u) must be
 c           evaluated.
+c    e    : integer, if 0 the spline is extrapolated from the end
+c           spans for points not in the support, if 1 the spline
+c           evaluates to zero for those points, and if 2 ier is set to
+c           1 and the subroutine returns.
 c    mx   : integer, giving the dimension of the array x. mx >= m*idim
 c
 c  output parameters:
@@ -51,11 +55,11 @@ c
 c  latest update : march 1987
 c
 c  ..scalar arguments..
-      integer idim,n,nc,k,m,mx,ier
+      integer idim,n,nc,k,m,mx,e,ier
 c  ..array arguments..
       real*8 t(n),c(nc),u(m),x(mx)
 c  ..local scalars..
-      integer i,j,jj,j1,k1,l,ll,l1,mm,nk1
+      integer i,j,jj,j1,k1,k2,l,ll,l1,mm,nk1
       real*8 arg,sp,tb,te
 c  ..local array..
       real*8 h(6)
@@ -73,6 +77,7 @@ c  are invalid control is immediately repassed to the calling program.
       ier = 0
 c  fetch tb and te, the boundaries of the approximation interval.
       k1 = k+1
+      k2 = k1+1
       nk1 = n-k1
       tb = t(k1)
       te = t(nk1+1)
@@ -82,10 +87,32 @@ c  main loop for the different points.
       mm = 0
       do 80 i=1,m
 c  fetch a new u-value arg.
-        arg = u(i)
-        if(arg.lt.tb) arg = tb
-        if(arg.gt.te) arg = te
+      arg = u(i)
+      if(arg.lt.tb .or. arg.gt.te) then
+          if (e.eq.0) then
+              goto 35
+          else if (e.eq.1) then
+              do 32 j1=1,idim
+                  mm = mm+1
+                  x(mm) = 0
+  32          continue
+              goto 80
+          else if (e.eq.2) then
+              ier = 1
+              goto 100
+          else if (e.eq.3) then
+              if (arg.lt.tb) then
+                  arg = tb
+              else
+                  arg = te
+              endif
+          endif
+      endif
 c  search for knot interval t(l) <= arg < t(l+1)
+  35    if (arg.ge.t(l) .or. l1.eq.k2) go to 40
+        l1 = l
+        l = l - 1
+        go to 35
   40    if(arg.lt.t(l1) .or. l.eq.nk1) go to 50
         l = l1
         l1 = l+1
